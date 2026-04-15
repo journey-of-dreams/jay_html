@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>直播实时页面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #000;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            position: fixed;
+        }
+
+        .simple-room-page {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100%;
+            background: #000;
+        }
+
+        .player-area {
+            position: relative;
+            flex: 1;
+            background: #000;
+            overflow: hidden;
+        }
+
+        .remote-video {
+            width: 100%;
+            height: 100%;
+            background: #000;
+        }
+
+        .remote-video video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .video-mask {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(2px);
+            z-index: 10;
+        }
+
+        .status-text {
+            color: #fff;
+            font-size: 16px;
+            padding: 12px 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 30px;
+            text-align: center;
+        }
+    </style>
+    <script src="https://download.agora.io/sdk/release/AgoraRTC_N-4.22.2.js"></script>
+</head>
+
+<body>
+    <div class="simple-room-page">
+        <div class="player-area">
+            <div id="remoteVideoEl" class="remote-video"></div>
+            <div id="videoMask" class="video-mask" style="display: flex;">
+                <div class="status-text">
+                    <span id="statusText">正在连接直播...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const liveRoomDetailApi = 'https://api.selalive.com/live/room/getDetail';
+
+        let loading = true;
+        let error = '';
+        let rtcClient = null;
+
+        const remoteVideoEl = document.getElementById('remoteVideoEl');
+        const videoMask = document.getElementById('videoMask');
+        const statusTextSpan = document.getElementById('statusText');
+
+        function updateMaskUI() {
+            if (loading || error) {
+                videoMask.style.display = 'flex';
+
+                statusTextSpan.innerText = error || '正在连接直播...';
+            } else {
+                videoMask.style.display = 'none';
+            }
+        }
+
+        function setLoading(isLoading) {
+            loading = isLoading;
+            updateMaskUI();
+        }
+
+        function setError(errMsg) {
+            error = errMsg;
+            loading = false;
+            updateMaskUI();
+            console.error('错误:', errMsg);
+        }
+
+        async function initPage() {
+            const urlParams = new URLSearchParams(window.location.search);
+
+            const res = await fetch(liveRoomDetailApi + "?roomId=" + urlParams.get('roomId'), {
+                method: 'GET',
+                headers: {
+                    Authorization: 'DS-eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiI2NTI3ODM3OSIsInN1YiI6IjY1Mjc4Mzc5IiwiaWF0IjoxNzc2MTQ2Nzc5LCJpc3MiOiJjaGVycnkiLCJ1c2VyIjoie1wiYXBwQ2hhbm5lbFwiOlwiY2hlcnJ5MjAwXCIsXCJhcHBOYW1lXCI6XCJjaGVycnlcIixcImNvdW50cnlDb2RlXCI6MTU2LFwiY3JlYXRlZEF0XCI6MTc3NTcyNjM0ODU4NCxcImRldmljZUlkXCI6XCJjaGVycnktd2ViLTE3NzU3MjYzNDU1MzM5Mjk0NDUzXCIsXCJsb2dpblRpbWVcIjoxNzc2MTQ2Nzc5MDg5LFwib3BlbklkXCI6XCIkMmEkMTAkUmZ0aU5UY1pSR1ppUGdMZno0LjkzLmllSmlNL0t5N0dYU0tibkVaakpqdjFhenBNSGpoR3lcIixcInJlZ2lzdGVyRmxhZ1wiOmZhbHNlLFwidHlwZVwiOjQsXCJ1c2VySWRcIjo2NTI3ODM3OSxcInVzZXJuYW1lXCI6XCI2NTI3ODM3OVwifSJ9.hrgsxBxvKyQ7HcPS-5n8zsUkIcfwuNEXGcDWP1HzzSE5qxWs7yydB8j-PMJk0O7bpgqlQHOiENuo-Jb85vClew',
+                    's-ua': 'runa,9.0.3,iPhone,18.5,runa200,903',
+                }
+            })
+            const { data } = await res.json();
+            if (data.roomStatus === 3) {
+                setError('主播已结束直播');
+            }
+
+            const client = AgoraRTC.createClient({
+                mode: 'live',
+                codec: 'h264',
+                role: 'audience',
+            });
+
+            AgoraRTC.setParameter('USE_NEW_TOKEN', true);
+
+            const token = '007eJxTYHCKXqQS7vFo8vlW5n1iwbd89BhqJm3cFdId/pNT96DOTVYFhhSD5DQzcwOjVEPjFBMzE0sLQ8skS1MgYWJkaWiSZHD6/93MhkBGhkxu52mMDIwMLEAM4jOBSWYwyQImGRm0OBjMTI3MLYzNLQGE1yCg';
+
+            client.on('user-published', async (user, mediaType) => {
+                if (mediaType == 'video' && user.uid == urlParams.get("userId")) {
+                    error.value = '';
+                }
+                await client.subscribe(user, mediaType);
+                const videoEle = document.getElementById('remoteVideoEl');
+                if (mediaType === 'video') {
+                    user.videoTrack.play(videoEle);
+                    user.videoTrack.on('first-frame-decoded', () => {
+                        setLoading(false);
+                    });
+                }
+                if (mediaType === 'audio') {
+                    user.audioTrack.play();
+                }
+            });
+
+            client.on('join-success', () => {
+                setLoading(false);
+            });
+
+            client.on('user-left', (user, reason) => {
+                console.log(`用户 ${user.uid} 离开频道，原因: ${reason}`);
+                if (user.uid === urlParams.get("userId")) {
+                    setError('主播已结束直播');
+                }
+            });
+
+            client.on('connection-state-change', (cur, prev) => {
+                console.log(`连接状态: ${prev} -> ${cur}`);
+                if (cur === 'DISCONNECTED') {
+                    setError('连接已断开');
+                }
+            });
+
+            client.on('exception', (event) => {
+                console.error('SDK 异常:', event);
+                if (event.code === 2) {
+                    setError('连接异常，请重试');
+                }
+            });
+
+            await client.leave();
+
+            client.join('d0cf6702e13d4649819b9519b42914b0', urlParams.get("channelName"), token, 65278379)
+            rtcClient = client;
+        }
+
+        // 启动
+        initPage();
+    </script>
+</body>
+
+</html>
