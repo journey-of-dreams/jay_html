@@ -89,7 +89,7 @@
                     <span id="statusText">正在连接直播...</span>
                 </div>
             </div>
-            <div class="net">net(1-6)：<span id="net_quality">0</span></div>
+            <div class="net">net(1-6)：<span id="net_quality">未知</span></div>
         </div>
     </div>
 
@@ -139,9 +139,7 @@
             localStorage.setItem("token", data)
             return token
         }
-        async function join(token) {
-            await client.join('d0cf6702e13d4649819b9519b42914b0', "LR" + urlParams.get("userId"), token, 65278379)
-        }
+
         async function initPage() {
             const urlParams = new URLSearchParams(window.location.search);
             let token = localStorage.getItem("token")
@@ -205,7 +203,7 @@
                 }
             });
             client.on("network-quality", stats => {
-                netQuality.innerText = stats.downlinkNetworkQuality
+                netQuality.innerText = stats.downlinkNetworkQuality || "未知"
             })
             client.on("token-privilege-will-expire", async function () {
                 console.log("token极简过期");
@@ -216,7 +214,7 @@
             client.on("token-privilege-did-expire", async function () {
                 console.log("token已过期");
                 const token = await setToken()
-                join(token)
+                client.join('d0cf6702e13d4649819b9519b42914b0', "LR" + urlParams.get("userId"), token, 65278379)
 
             });
             client.on('exception', async (event) => {
@@ -228,10 +226,13 @@
 
             await client.leave();
 
-            join(token).catch(async err => {
+            client.join('d0cf6702e13d4649819b9519b42914b0', "LR" + urlParams.get("userId"), token, 65278379).catch(async err => {
+                console.log("加入失败", err);
+
                 if (err.code === "CAN_NOT_GET_GATEWAY_SERVER") {
                     const token = await setToken()
-                    join(token)
+                    client.join('d0cf6702e13d4649819b9519b42914b0', "LR" + urlParams.get("userId"), token, 65278379)
+
                 }
             })
             rtcClient = client;
