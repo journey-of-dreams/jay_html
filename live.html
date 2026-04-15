@@ -148,11 +148,7 @@
             }
 
             const res = await fetch(liveRoomDetailApi + "?roomId=" + urlParams.get('roomId'), {
-                method: 'GET',
-                headers: {
-                    Authorization: 'DS-eyJhbGciOiJIUzUxMiJ9.eyJqdGkiOiI2NTI3ODM3OSIsInN1YiI6IjY1Mjc4Mzc5IiwiaWF0IjoxNzc2MTQ2Nzc5LCJpc3MiOiJjaGVycnkiLCJ1c2VyIjoie1wiYXBwQ2hhbm5lbFwiOlwiY2hlcnJ5MjAwXCIsXCJhcHBOYW1lXCI6XCJjaGVycnlcIixcImNvdW50cnlDb2RlXCI6MTU2LFwiY3JlYXRlZEF0XCI6MTc3NTcyNjM0ODU4NCxcImRldmljZUlkXCI6XCJjaGVycnktd2ViLTE3NzU3MjYzNDU1MzM5Mjk0NDUzXCIsXCJsb2dpblRpbWVcIjoxNzc2MTQ2Nzc5MDg5LFwib3BlbklkXCI6XCIkMmEkMTAkUmZ0aU5UY1pSR1ppUGdMZno0LjkzLmllSmlNL0t5N0dYU0tibkVaakpqdjFhenBNSGpoR3lcIixcInJlZ2lzdGVyRmxhZ1wiOmZhbHNlLFwidHlwZVwiOjQsXCJ1c2VySWRcIjo2NTI3ODM3OSxcInVzZXJuYW1lXCI6XCI2NTI3ODM3OVwifSJ9.hrgsxBxvKyQ7HcPS-5n8zsUkIcfwuNEXGcDWP1HzzSE5qxWs7yydB8j-PMJk0O7bpgqlQHOiENuo-Jb85vClew',
-                    's-ua': 'runa,9.0.3,iPhone,18.5,runa200,903',
-                }
+                headers: headers
             })
             const { data } = await res.json();
             if (data.roomStatus === 3) {
